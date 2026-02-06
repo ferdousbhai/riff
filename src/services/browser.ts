@@ -11,20 +11,33 @@ let page: Page | null = null;
 export async function launchBrowser(): Promise<Page> {
   if (page) return page;
 
-  // Use headless mode with autoplay policy disabled.
-  // This avoids any visible browser window (critical for tiling WMs)
-  // and removes the need for a user-gesture click to init audio.
+  // Must use headed mode — headless Chromium has no audio device.
+  // Position off-screen to keep it out of sight on floating WMs.
   browser = await chromium.launch({
-    headless: true,
-    args: ["--autoplay-policy=no-user-gesture-required"],
+    headless: false,
+    args: [
+      "--autoplay-policy=no-user-gesture-required",
+      "--window-position=-2000,-2000",
+      "--window-size=400,300",
+    ],
   });
 
   const context = await browser.newContext();
   page = await context.newPage();
+
+  // Forward browser console to Node for debugging
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
+      console.error(`[browser] ${msg.text()}`);
+    }
+  });
+  page.on("pageerror", (err) => {
+    console.error(`[browser] Page error: ${err.message}`);
+  });
+
   await page.goto(`file://${PLAYER_PATH}`);
 
-  // Classic <script> loads synchronously — __isReady is defined immediately.
-  // Trigger init — no user gesture needed with autoplay policy disabled.
+  // Click init — autoplay policy flag means no real gesture needed
   await page.click("#init");
 
   // Wait for Strudel to finish initializing
