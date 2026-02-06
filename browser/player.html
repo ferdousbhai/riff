@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Riff Player</title>
+  <script src="https://unpkg.com/@strudel/web@1.3.0"></script>
+</head>
+<body>
+  <button id="init" style="font-size:24px;padding:20px">Init Audio</button>
+  <pre id="status">not initialized</pre>
+  <script type="module">
+    const statusEl = document.getElementById('status');
+    let initialized = false;
+
+    document.getElementById('init').addEventListener('click', async () => {
+      if (initialized) return;
+      try {
+        await initStrudel();
+        initialized = true;
+        statusEl.textContent = 'ready';
+      } catch (err) {
+        statusEl.textContent = 'init-error: ' + err.message;
+      }
+    });
+
+    // Playwright calls these via page.evaluate()
+    window.__isReady = () => initialized;
+
+    window.__evaluate = async (code) => {
+      if (!initialized) throw new Error('Not initialized');
+      try {
+        await evaluate(code, true);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+    };
+
+    window.__hush = () => {
+      if (!initialized) return { ok: true };
+      try {
+        hush();
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+    };
+  </script>
+</body>
+</html>

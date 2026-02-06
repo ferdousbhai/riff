@@ -1,0 +1,32 @@
+{
+  "name": "riff",
+  "version": "0.1.0",
+  "description": "AI-powered music production TUI — Cursor for music",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "riff": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "browser"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.tsx",
+    "dev": "tsx --watch src/index.tsx"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "ink": "^5.1.0",
+    "ink-text-input": "^6.0.0",
+    "playwright": "^1.49.0",
+    "react": "^18.3.1",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
