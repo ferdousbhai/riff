@@ -2,13 +2,12 @@
 <html>
 <head>
   <title>Riff Player</title>
+  <script src="./strudel.js"></script>
 </head>
 <body>
   <button id="init" style="font-size:24px;padding:20px">Init Audio</button>
   <pre id="status">not initialized</pre>
-  <script type="module">
-    import { initStrudel, evaluate, hush } from './strudel.mjs';
-
+  <script>
     const statusEl = document.getElementById('status');
     let initialized = false;
 

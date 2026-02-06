@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "postinstall": "cp node_modules/@strudel/web/dist/index.mjs browser/strudel.mjs && cp -r node_modules/@strudel/web/dist/assets browser/assets",
+    "postinstall": "cp node_modules/@strudel/web/dist/index.js browser/strudel.js && cp -r node_modules/@strudel/web/dist/assets browser/assets",
     "start": "tsx src/index.tsx",
     "dev": "tsx --watch src/index.tsx",
     "test": "vitest run"

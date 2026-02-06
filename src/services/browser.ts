@@ -23,13 +23,9 @@ export async function launchBrowser(): Promise<Page> {
   page = await context.newPage();
   await page.goto(`file://${PLAYER_PATH}`);
 
-  // Wait for the ESM module to load and define __isReady on window
-  await page.waitForFunction(() => typeof (window as any).__isReady === "function", {
-    timeout: 30_000,
-  });
-
-  // Trigger init — no user gesture needed with autoplay policy disabled
-  await page.evaluate(() => document.getElementById("init")?.click());
+  // Classic <script> loads synchronously — __isReady is defined immediately.
+  // Trigger init — no user gesture needed with autoplay policy disabled.
+  await page.click("#init");
 
   // Wait for Strudel to finish initializing
   await page.waitForFunction(() => (window as any).__isReady(), {
