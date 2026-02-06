@@ -23,13 +23,15 @@ export async function launchBrowser(): Promise<Page> {
   page = await context.newPage();
   await page.goto(`file://${PLAYER_PATH}`);
 
-  // Directly invoke init — no click needed with autoplay policy disabled
-  await page.evaluate(async () => {
-    const btn = document.getElementById("init");
-    btn?.click();
+  // Wait for the ESM module to load and define __isReady on window
+  await page.waitForFunction(() => typeof (window as any).__isReady === "function", {
+    timeout: 30_000,
   });
 
-  // Wait for Strudel to initialize
+  // Trigger init — no user gesture needed with autoplay policy disabled
+  await page.evaluate(() => document.getElementById("init")?.click());
+
+  // Wait for Strudel to finish initializing
   await page.waitForFunction(() => (window as any).__isReady(), {
     timeout: 30_000,
   });
