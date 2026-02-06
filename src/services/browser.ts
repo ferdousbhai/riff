@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLAYER_PATH = join(__dirname, "../../browser/player.html");
+const STRUDEL_PATH = join(__dirname, "../../browser/strudel.js");
 
 let browser: Browser | null = null;
 let page: Page | null = null;
@@ -25,17 +26,14 @@ export async function launchBrowser(): Promise<Page> {
   const context = await browser.newContext();
   page = await context.newPage();
 
-  // Forward browser console to Node for debugging
-  page.on("console", (msg) => {
-    if (msg.type() === "error") {
-      console.error(`[browser] ${msg.text()}`);
-    }
-  });
   page.on("pageerror", (err) => {
-    console.error(`[browser] Page error: ${err.message}`);
+    console.error(`[browser] ${err.message}`);
   });
 
   await page.goto(`file://${PLAYER_PATH}`);
+
+  // Inject Strudel via addScriptTag — file:// blocks <script src> loads
+  await page.addScriptTag({ path: STRUDEL_PATH });
 
   // Click init — autoplay policy flag means no real gesture needed
   await page.click("#init");
