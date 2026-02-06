@@ -13,7 +13,7 @@ const MAX_RETRIES = 2;
 export function App() {
   const { exit } = useApp();
   const [inputValue, setInputValue] = useState("");
-  const { messages, streamingText, isStreaming, sendMessage } = useChat();
+  const { messages, streamingText, isStreaming, sendMessage, abortStream } = useChat();
   const {
     playbackState,
     currentPattern,
@@ -34,10 +34,14 @@ export function App() {
       .catch(() => setBrowserStatus("error"));
   }, [initBrowser]);
 
-  // Handle Ctrl+. to stop playback (Strudel convention)
   useInput((input, key) => {
+    // Ctrl+. — stop playback (Strudel convention)
     if (input === "." && key.ctrl) {
       stop();
+    }
+    // Escape — cancel streaming response
+    if (key.escape && isStreaming) {
+      abortStream();
     }
   });
 

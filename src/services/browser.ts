@@ -11,20 +11,23 @@ let page: Page | null = null;
 export async function launchBrowser(): Promise<Page> {
   if (page) return page;
 
+  // Use headless mode with autoplay policy disabled.
+  // This avoids any visible browser window (critical for tiling WMs)
+  // and removes the need for a user-gesture click to init audio.
   browser = await chromium.launch({
-    headless: false,
-    args: [
-      "--window-position=-2000,-2000", // move off-screen
-      "--window-size=400,300",
-    ],
+    headless: true,
+    args: ["--autoplay-policy=no-user-gesture-required"],
   });
 
   const context = await browser.newContext();
   page = await context.newPage();
   await page.goto(`file://${PLAYER_PATH}`);
 
-  // Click the init button to satisfy autoplay policy
-  await page.click("#init");
+  // Directly invoke init — no click needed with autoplay policy disabled
+  await page.evaluate(async () => {
+    const btn = document.getElementById("init");
+    btn?.click();
+  });
 
   // Wait for Strudel to initialize
   await page.waitForFunction(() => (window as any).__isReady(), {

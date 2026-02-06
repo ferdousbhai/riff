@@ -27,6 +27,7 @@ export function StatusBar({ playbackState, error }: StatusBarProps) {
           </Text>
         </Text>
         <Text dimColor>ctrl+. stop</Text>
+        <Text dimColor>esc cancel</Text>
         <Text dimColor>ctrl+c quit</Text>
       </Box>
       {error && (

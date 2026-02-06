@@ -9,6 +9,7 @@ interface UseChatReturn {
   isStreaming: boolean;
   isBusy: boolean;
   sendMessage: (text: string) => Promise<string | null>;
+  abortStream: () => void;
 }
 
 export function useChat(): UseChatReturn {
@@ -18,13 +19,21 @@ export function useChat(): UseChatReturn {
   const messagesRef = useRef<Message[]>([]);
   const busyRef = useRef(false);
   const idCounter = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   const nextId = () => String(++idCounter.current);
+
+  const abortStream = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
 
   const sendMessage = useCallback(
     async (text: string): Promise<string | null> => {
       if (busyRef.current) return null;
       busyRef.current = true;
+
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       const userMsg: Message = { id: nextId(), role: "user", content: text };
       const updated = [...messagesRef.current, userMsg];
@@ -36,7 +45,7 @@ export function useChat(): UseChatReturn {
       const assistantId = nextId();
       let fullText = "";
       try {
-        for await (const delta of streamResponse(updated)) {
+        for await (const delta of streamResponse(updated, controller.signal)) {
           fullText += delta;
           setStreamingText(fullText);
           setMessages([
@@ -45,7 +54,14 @@ export function useChat(): UseChatReturn {
           ]);
         }
       } catch (err: any) {
-        fullText = `Error: ${err.message}`;
+        if (!controller.signal.aborted) {
+          fullText = `Error: ${err.message}`;
+        }
+      }
+
+      // If aborted, keep partial text as the response
+      if (controller.signal.aborted && !fullText) {
+        fullText = "(cancelled)";
       }
 
       const pattern = extractPattern(fullText);
@@ -61,13 +77,14 @@ export function useChat(): UseChatReturn {
       setStreamingText("");
       setIsStreaming(false);
       busyRef.current = false;
+      abortRef.current = null;
 
       return pattern;
     },
     [],
   );
 
-  return { messages, streamingText, isStreaming, isBusy: busyRef.current, sendMessage };
+  return { messages, streamingText, isStreaming, isBusy: busyRef.current, sendMessage, abortStream };
 }
 
 /**
