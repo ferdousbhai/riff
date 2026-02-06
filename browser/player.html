@@ -14,7 +14,7 @@
     document.getElementById('init').addEventListener('click', async () => {
       if (initialized) return;
       try {
-        await initStrudel();
+        await strudel.initStrudel();
         initialized = true;
         statusEl.textContent = 'ready';
       } catch (err) {
@@ -28,7 +28,7 @@
     window.__evaluate = async (code) => {
       if (!initialized) throw new Error('Not initialized');
       try {
-        await evaluate(code, true);
+        await strudel.evaluate(code, true);
         return { ok: true };
       } catch (err) {
         return { ok: false, error: err.message };
@@ -38,7 +38,7 @@
     window.__hush = () => {
       if (!initialized) return { ok: true };
       try {
-        hush();
+        strudel.hush();
         return { ok: true };
       } catch (err) {
         return { ok: false, error: err.message };
