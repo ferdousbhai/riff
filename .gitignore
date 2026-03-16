@@ -1,8 +1,8 @@
 node_modules/
 dist/
+out/
+build/
 .env
 *.tsbuildinfo
 package-lock.json
-browser/strudel.js
-browser/strudel.mjs
-browser/assets/
+bun.lockb

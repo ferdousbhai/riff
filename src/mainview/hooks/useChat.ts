@@ -1,13 +1,12 @@
-import { useState, useCallback, useRef } from "react";
-import { streamResponse } from "../services/claude.js";
-import { extractPattern } from "../lib/pattern-extractor.js";
-import type { Message } from "../lib/types.js";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { extractPattern } from "../../shared/pattern-extractor";
+import { electroview, setStreamHandler } from "../rpc";
+import type { Message } from "../../shared/types";
 
 interface UseChatReturn {
   messages: Message[];
   streamingText: string;
   isStreaming: boolean;
-  isBusy: boolean;
   sendMessage: (text: string) => Promise<string | null>;
   abortStream: () => void;
 }
@@ -19,12 +18,44 @@ export function useChat(): UseChatReturn {
   const messagesRef = useRef<Message[]>([]);
   const busyRef = useRef(false);
   const idCounter = useRef(0);
-  const abortRef = useRef<AbortController | null>(null);
+  const resolveStreamRef = useRef<(() => void) | null>(null);
+  const fullTextRef = useRef("");
+  const assistantIdRef = useRef("");
+  const updatedRef = useRef<Message[]>([]);
 
   const nextId = () => String(++idCounter.current);
 
+  // Register RPC stream handlers
+  useEffect(() => {
+    setStreamHandler({
+      onDelta: (delta) => {
+        fullTextRef.current += delta;
+        const text = fullTextRef.current;
+        setStreamingText(text);
+        setMessages([
+          ...updatedRef.current,
+          {
+            id: assistantIdRef.current,
+            role: "assistant",
+            content: text,
+          },
+        ]);
+      },
+      onDone: () => {
+        resolveStreamRef.current?.();
+      },
+      onError: (error) => {
+        fullTextRef.current = `Error: ${error}`;
+        resolveStreamRef.current?.();
+      },
+    });
+
+    return () => setStreamHandler({});
+  }, []);
+
   const abortStream = useCallback(() => {
-    abortRef.current?.abort();
+    electroview.rpc!.request.abortStream({});
+    resolveStreamRef.current?.();
   }, []);
 
   const sendMessage = useCallback(
@@ -32,41 +63,26 @@ export function useChat(): UseChatReturn {
       if (busyRef.current) return null;
       busyRef.current = true;
 
-      const controller = new AbortController();
-      abortRef.current = controller;
-
       const userMsg: Message = { id: nextId(), role: "user", content: text };
       const updated = [...messagesRef.current, userMsg];
       messagesRef.current = updated;
+      updatedRef.current = updated;
       setMessages([...updated]);
       setIsStreaming(true);
       setStreamingText("");
+      fullTextRef.current = "";
+      assistantIdRef.current = nextId();
 
-      const assistantId = nextId();
-      let fullText = "";
-      try {
-        for await (const delta of streamResponse(updated, controller.signal)) {
-          fullText += delta;
-          setStreamingText(fullText);
-          setMessages([
-            ...updated,
-            { id: assistantId, role: "assistant", content: fullText },
-          ]);
-        }
-      } catch (err: any) {
-        if (!controller.signal.aborted) {
-          fullText = `Error: ${err.message}`;
-        }
-      }
+      // Start the stream and wait for done/error via RPC message handlers
+      await new Promise<void>((resolve) => {
+        resolveStreamRef.current = resolve;
+        electroview.rpc!.request.startStream({ messages: updated });
+      });
 
-      // If aborted, keep partial text as the response
-      if (controller.signal.aborted && !fullText) {
-        fullText = "(cancelled)";
-      }
-
+      const fullText = fullTextRef.current;
       const pattern = extractPattern(fullText);
       const assistantMsg: Message = {
-        id: assistantId,
+        id: assistantIdRef.current,
         role: "assistant",
         content: fullText,
         pattern: pattern ?? undefined,
@@ -77,20 +93,16 @@ export function useChat(): UseChatReturn {
       setStreamingText("");
       setIsStreaming(false);
       busyRef.current = false;
-      abortRef.current = null;
+      resolveStreamRef.current = null;
 
       return pattern;
     },
     [],
   );
 
-  return { messages, streamingText, isStreaming, isBusy: busyRef.current, sendMessage, abortStream };
+  return { messages, streamingText, isStreaming, sendMessage, abortStream };
 }
 
-/**
- * Build a retry message for when Strudel evaluation fails.
- * This is appended to conversation so Claude can self-correct.
- */
 export function buildRetryMessage(code: string, error: string): string {
   return `The pattern you generated failed to evaluate with this error:\n\`\`\`\n${error}\n\`\`\`\nOriginal code:\n\`\`\`strudel\n${code}\n\`\`\`\nPlease fix the code. Remember: no variable declarations, no .play(), just a single Strudel expression.`;
 }

@@ -1,0 +1,42 @@
+import { useState, useCallback } from "react";
+import { useStrudel } from "./useStrudel";
+import type { PlaybackState, EvalResult } from "../../shared/types";
+
+export function usePlayback() {
+  const { isReady, init, evaluate, hush } = useStrudel();
+  const [playbackState, setPlaybackState] = useState<PlaybackState>("stopped");
+  const [error, setError] = useState<string | null>(null);
+
+  const initAudio = useCallback(async () => {
+    try {
+      await init();
+    } catch {
+      setError("Failed to initialize audio engine");
+      setPlaybackState("error");
+    }
+  }, [init]);
+
+  const play = useCallback(
+    async (code: string): Promise<EvalResult> => {
+      setPlaybackState("loading");
+      setError(null);
+
+      const result = await evaluate(code);
+      if (result.ok) {
+        setPlaybackState("playing");
+      } else {
+        setPlaybackState("error");
+        setError(result.error ?? "Evaluation failed");
+      }
+      return result;
+    },
+    [evaluate],
+  );
+
+  const stop = useCallback(() => {
+    hush();
+    setPlaybackState("stopped");
+  }, [hush]);
+
+  return { isReady, playbackState, error, initAudio, play, stop };
+}
