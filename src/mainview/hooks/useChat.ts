@@ -3,15 +3,7 @@ import { extractPattern } from "../../shared/pattern-extractor";
 import { electroview, setStreamHandler } from "../rpc";
 import type { Message } from "../../shared/types";
 
-interface UseChatReturn {
-  messages: Message[];
-  streamingText: string;
-  isStreaming: boolean;
-  sendMessage: (text: string) => Promise<string | null>;
-  abortStream: () => void;
-}
-
-export function useChat(): UseChatReturn {
+export function useChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingText, setStreamingText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -23,9 +15,10 @@ export function useChat(): UseChatReturn {
   const assistantIdRef = useRef("");
   const updatedRef = useRef<Message[]>([]);
 
-  const nextId = () => String(++idCounter.current);
+  function nextId(): string {
+    return String(++idCounter.current);
+  }
 
-  // Register RPC stream handlers
   useEffect(() => {
     setStreamHandler({
       onDelta: (delta) => {
@@ -41,9 +34,7 @@ export function useChat(): UseChatReturn {
           },
         ]);
       },
-      onDone: () => {
-        resolveStreamRef.current?.();
-      },
+      onDone: () => resolveStreamRef.current?.(),
       onError: (error) => {
         fullTextRef.current = `Error: ${error}`;
         resolveStreamRef.current?.();
@@ -73,7 +64,6 @@ export function useChat(): UseChatReturn {
       fullTextRef.current = "";
       assistantIdRef.current = nextId();
 
-      // Start the stream and wait for done/error via RPC message handlers
       await new Promise<void>((resolve) => {
         resolveStreamRef.current = resolve;
         electroview.rpc!.request.startStream({ messages: updated });
@@ -85,7 +75,7 @@ export function useChat(): UseChatReturn {
         id: assistantIdRef.current,
         role: "assistant",
         content: fullText,
-        pattern: pattern ?? undefined,
+        pattern: pattern || undefined,
       };
       const final = [...updated, assistantMsg];
       messagesRef.current = final;

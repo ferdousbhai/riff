@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect, useMemo } from "react";
+import { useCallback, useRef, useMemo } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -23,11 +23,9 @@ export function EditorPanel({
   onPlay,
   onStop,
 }: EditorPanelProps) {
+  // Ref keeps code in sync for keymap callbacks (closures capture stale props)
   const codeRef = useRef(code);
-
-  useEffect(() => {
-    codeRef.current = code;
-  }, [code]);
+  codeRef.current = code;
 
   const handlePlay = useCallback(() => {
     if (codeRef.current.trim()) {

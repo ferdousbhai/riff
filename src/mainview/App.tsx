@@ -15,11 +15,9 @@ export function App() {
   const { isReady, playbackState, error, initAudio, play, stop } =
     usePlayback();
 
-  // Try to initialize audio eagerly on mount
   useEffect(() => {
-    initAudio().catch(() => {
-      // Autoplay policy may block — will retry on first user interaction
-    });
+    // Autoplay policy may block -- will retry on first user interaction
+    initAudio().catch(() => {});
   }, [initAudio]);
 
   useKeyboardShortcuts({
@@ -28,48 +26,48 @@ export function App() {
     isStreaming,
   });
 
+  const ensureAudio = useCallback(async () => {
+    if (!isReady) await initAudio();
+  }, [isReady, initAudio]);
+
   const handleSendMessage = useCallback(
     async (text: string) => {
-      if (!isReady) await initAudio();
+      await ensureAudio();
 
       const pattern = await sendMessage(text);
-
       if (!pattern) return;
 
       setCode(pattern);
       const result = await play(pattern);
-
-      // Auto-retry loop: if evaluation fails, ask Claude to fix
       if (result.ok || !result.error) return;
 
-      let retries = 0;
+      // Auto-retry: if evaluation fails, ask Claude to fix (up to MAX_RETRIES)
       let lastError = result.error;
       let lastCode = pattern;
 
-      while (retries < MAX_RETRIES) {
-        retries++;
+      for (let i = 0; i < MAX_RETRIES; i++) {
         const fixedPattern = await sendMessage(
           buildRetryMessage(lastCode, lastError),
         );
-
         if (!fixedPattern) break;
 
         setCode(fixedPattern);
         const retryResult = await play(fixedPattern);
         if (retryResult.ok) break;
+
         lastError = retryResult.error ?? "Unknown error";
         lastCode = fixedPattern;
       }
     },
-    [isReady, initAudio, sendMessage, play],
+    [ensureAudio, sendMessage, play],
   );
 
   const handlePlay = useCallback(
     async (editorCode: string) => {
-      if (!isReady) await initAudio();
+      await ensureAudio();
       return play(editorCode);
     },
-    [isReady, initAudio, play],
+    [ensureAudio, play],
   );
 
   return (

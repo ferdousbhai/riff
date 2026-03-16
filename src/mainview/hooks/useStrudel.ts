@@ -13,20 +13,16 @@ export function useStrudel() {
     try {
       const strudel = await import("@strudel/web");
 
-      // Pre-create a running AudioContext and inject it into Strudel
-      // BEFORE calling initStrudel(). This ensures the audio pipeline
-      // is active from the start, bypassing initAudioOnFirstClick().
+      // Pre-create AudioContext before initStrudel() to bypass initAudioOnFirstClick()
       const ctx = new AudioContext();
       await ctx.resume();
       strudel.setAudioContext(ctx);
 
       await strudel.initStrudel({
-        prebake: async () => {
-          await strudel.samples("github:tidalcycles/Dirt-Samples/master");
-        },
+        prebake: () =>
+          strudel.samples("github:tidalcycles/Dirt-Samples/master"),
       });
 
-      // Eagerly initialize superdough audio engine (loads AudioWorklets).
       await strudel.initAudio();
       strudelRef.current = strudel;
       setIsReady(true);

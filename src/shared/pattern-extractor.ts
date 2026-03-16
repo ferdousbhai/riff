@@ -1,19 +1,17 @@
 /**
  * Extract the last Strudel code block from a markdown response.
- * Looks for ```strudel or ```js fenced code blocks.
- * Returns the code string or null if none found.
+ * Matches ```strudel, ```js, or ```javascript fenced blocks.
+ * Bare ``` blocks are ignored to avoid extracting non-Strudel code.
  */
 export function extractPattern(text: string): string | null {
-  // Only match fenced code blocks with strudel, js, or javascript lang hints.
-  // Bare ``` blocks are ignored to avoid extracting non-Strudel code.
-  const regex = /```(?:strudel|js|javascript)\s*\n([\s\S]*?)```/g;
-  let lastMatch: string | null = null;
+  const matches = [
+    ...text.matchAll(/```(?:strudel|js|javascript)\s*\n([\s\S]*?)```/g),
+  ];
 
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    const code = match[1].trim();
-    if (code) lastMatch = code;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const code = matches[i][1].trim();
+    if (code) return code;
   }
 
-  return lastMatch;
+  return null;
 }

@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { RiffRPC } from "../shared/rpc-schema";
 import type { Message } from "../shared/types";
 
-// --- Claude Streaming Service ---
+// ── Claude Streaming ─────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are a music producer assistant for Riff, an AI-powered live-coding music tool.
 You generate Strudel (JavaScript-based live-coding) patterns that play in the browser.
@@ -113,9 +113,8 @@ stack(
 \`\`\`
 `;
 
-// Bun reads .env automatically — no dotenv needed
 const client = new Anthropic();
-const model = process.env.CLAUDE_MODEL || "claude-sonnet-4-5-20250929";
+const model = process.env.CLAUDE_MODEL ?? "claude-sonnet-4-5-20250929";
 
 function friendlyError(err: unknown): string {
   if (err instanceof Anthropic.AuthenticationError)
@@ -130,12 +129,11 @@ function friendlyError(err: unknown): string {
   return "Unknown error";
 }
 
-// --- RPC & Window Setup ---
+// ── RPC & Window Setup ───────────────────────────────────────────────
 
 let activeAbort: AbortController | null = null;
 
-const DEV_SERVER_PORT = 5173;
-const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
+const DEV_SERVER_URL = "http://localhost:5173";
 
 async function getMainViewUrl(): Promise<string> {
   const channel = await Updater.localInfo.channel();
@@ -155,11 +153,11 @@ const rpc = BrowserView.defineRPC<RiffRPC>({
   maxRequestTime: 10000,
   handlers: {
     requests: {
-      startStream: ({ messages }) => {
-        streamClaude(messages);
+      startStream({ messages }) {
+        void streamClaude(messages);
         return { ok: true };
       },
-      abortStream: () => {
+      abortStream() {
         activeAbort?.abort();
         activeAbort = null;
         return { ok: true };
@@ -183,10 +181,9 @@ new BrowserWindow({
   },
 });
 
-// --- Stream management ---
-// Uses rpc.send directly — transport is active after BrowserWindow creation
+// ── Stream Management ────────────────────────────────────────────────
 
-async function streamClaude(messages: Message[]) {
+async function streamClaude(messages: Message[]): Promise<void> {
   activeAbort?.abort();
   const abort = new AbortController();
   activeAbort = abort;
@@ -197,10 +194,7 @@ async function streamClaude(messages: Message[]) {
         model,
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
-        messages: messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        messages: messages.map(({ role, content }) => ({ role, content })),
       },
       { signal: abort.signal },
     );
@@ -215,20 +209,16 @@ async function streamClaude(messages: Message[]) {
     }
 
     rpc.send.streamDone({});
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      (err.name === "AbortError" || abort.signal.aborted)
-    ) {
-      return;
-    }
+  } catch (err) {
+    if (abort.signal.aborted) return;
     rpc.send.streamError({ error: friendlyError(err) });
   } finally {
     if (activeAbort === abort) activeAbort = null;
   }
 }
 
-// Application menu with standard edit operations (required for Cmd+C/V/X to work)
+// ── Application Menu ─────────────────────────────────────────────────
+
 ApplicationMenu.setApplicationMenu([
   {
     submenu: [{ label: "Quit", role: "quit" }],

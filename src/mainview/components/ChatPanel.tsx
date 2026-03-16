@@ -17,12 +17,10 @@ export function ChatPanel({
   onSendMessage,
 }: ChatPanelProps) {
   const [inputValue, setInputValue] = useState("");
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingText]);
 
   const handleSubmit = useCallback(() => {
@@ -32,12 +30,14 @@ export function ChatPanel({
     onSendMessage(text);
   }, [inputValue, isStreaming, onSendMessage]);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
-  };
+  }
+
+  const isEmpty = messages.length === 0 && !streamingText;
 
   return (
     <div className="flex flex-col h-full">
@@ -45,8 +45,8 @@ export function ChatPanel({
         <span className="text-sm font-medium text-gray-400">Riff Chat</span>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
-        {messages.length === 0 && !streamingText && (
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        {isEmpty && (
           <div className="flex items-center justify-center h-full text-gray-500 text-sm">
             Describe the music you want to create
           </div>
@@ -63,6 +63,8 @@ export function ChatPanel({
             </div>
           </div>
         )}
+
+        <div ref={bottomRef} />
       </div>
 
       <div className="border-t border-white/10 p-3">
