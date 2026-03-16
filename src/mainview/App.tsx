@@ -16,8 +16,8 @@ export function App() {
     usePlayback();
 
   useEffect(() => {
-    // Autoplay policy may block -- will retry on first user interaction
-    initAudio().catch(() => {});
+    // Autoplay policy may block — will retry on first user interaction
+    initAudio().catch((err) => console.warn("Audio init deferred:", err));
   }, [initAudio]);
 
   useKeyboardShortcuts({

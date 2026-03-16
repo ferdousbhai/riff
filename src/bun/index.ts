@@ -114,7 +114,7 @@ stack(
 `;
 
 const client = new Anthropic();
-const model = process.env.CLAUDE_MODEL ?? "claude-sonnet-4-5-20250929";
+const model = process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6";
 
 function friendlyError(err: unknown): string {
   if (err instanceof Anthropic.AuthenticationError)

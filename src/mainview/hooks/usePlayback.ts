@@ -10,8 +10,9 @@ export function usePlayback() {
   const initAudio = useCallback(async () => {
     try {
       await init();
-    } catch {
-      setError("Failed to initialize audio engine");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`Audio init failed: ${message}`);
       setPlaybackState("error");
     }
   }, [init]);

@@ -13,7 +13,7 @@ export default {
     },
     watchIgnore: ["dist/**"],
     linux: {
-      bundleCEF: true,
+      bundleCEF: false,
     },
   },
 } satisfies ElectrobunConfig;

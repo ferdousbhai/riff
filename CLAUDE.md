@@ -92,4 +92,4 @@ User types message → ChatPanel → RPC request startStream →
 ## Environment
 
 - `ANTHROPIC_API_KEY` — required (in `.env`)
-- `CLAUDE_MODEL` — optional, defaults to `claude-sonnet-4-5-20250929`
+- `CLAUDE_MODEL` — optional, defaults to `claude-sonnet-4-6`
